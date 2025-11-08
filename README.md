@@ -141,13 +141,13 @@ cd VNSAA
 
 ```bash
 # Sử dụng venv
-python -m venv venv
+python -m venv .venv
 
 # Kích hoạt môi trường ảo
 # Trên Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 # Trên Linux/Mac:
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 ### Bước 3: Cài đặt dependencies
