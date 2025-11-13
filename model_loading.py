@@ -2,50 +2,39 @@ import time
 import joblib
 from transformers import AutoModel, AutoTokenizer
 import streamlit as st
-from torch.utils.data import Dataset
 
 @st.cache_resource
 def load_model_pipeline():
-    print("Loading model pipeline...")
+    # Ghi nhận thời gian bắt đầu
     start_time = time.time()
+    print("> Loading model pipeline...")
 
-    # sentiment_pipeline = pipeline(
-    #     task="sentiment-analysis",
-    #     # model="wonrax/phobert-base-vietnamese-sentiment"
-    #     model="vinai/phobert-base-v2"
-    # )
+    # Tải mô hình PhoBERT-base-v2
     model_name = "vinai/phobert-base-v2"
     model = AutoModel.from_pretrained(model_name)
+
+    # Tải tokenizer tương ứng với PhoBERT
+    # use_fast=False vì PhoBERT sử dụng kiểu tokenizer đặc thù của BPE (Byte-Pair Encoding)
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
-    clf = joblib.load("svm_phobert_sentiment.pkl")
+
+    # Tải mô hình phân loại SVM (đã được train sẵn) từ file pickle
+    # Mô hình này sẽ nhận embedding từ PhoBERT để dự đoán nhãn cảm xúc
+    classifier = joblib.load("svm_phobert_sentiment.pkl")
+
+    # Chọn thiết bị để chạy model
     device = "cpu"
     model.to(device)
+
+    # Chuyển model sang chế độ đánh giá
     model.eval()
 
+    # Ghi nhận thời gian kết thúc
     end_time = time.time()
-    print(f"Model has been loaded! (Took {end_time - start_time:.2f} seconds)")
-    # return sentiment_pipeline
-    return {"model": model, "tokenizer": tokenizer, "classifier": clf, "device": device}
+    print(f"> Model has been loaded! (Took {end_time - start_time:.2f} seconds)")
 
-class InferenceDataset(Dataset):
-    def __init__(self, texts, tokenizer, max_len=100):
-        self.texts = texts
-        self.tokenizer = tokenizer
-        self.max_len = max_len
-
-    def __len__(self):
-        return len(self.texts)
-
-    def __getitem__(self, idx):
-        text = self.texts[idx]
-        encoded = self.tokenizer.encode_plus(
-            text,
-            add_special_tokens=True,
-            max_length=self.max_len,
-            padding="max_length",
-            truncation=True,
-            return_attention_mask=True,
-            return_tensors="pt",
-        )
-        return {"input_ids": encoded["input_ids"].squeeze(0),
-                "attention_mask": encoded["attention_mask"].squeeze(0)}
+    # Trả về dictionary chứa các thành phần cần thiết cho pipeline
+    return {"model": model, 
+            "tokenizer": tokenizer, 
+            "classifier": classifier, 
+            "device": device
+    }
