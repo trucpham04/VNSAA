@@ -1,7 +1,7 @@
 import streamlit as st
 from database import delete_all_records, initialize_database, save_to_sqlite, load_data_from_sqlite, has_more_records, get_total_pages
 from model_loading import load_model_pipeline
-from preprocessing import normalize_text, correct_slang_words, tokenize_text
+from preprocessing import correct_slang_words, standardize_text, tokenize_text
 from sentiment_classification import classify_sentiment
 from utils import show_pipeline_steps, show_sentiment_result
 
@@ -11,10 +11,10 @@ def full_pipeline(text: str, sentiment_pipeline):
         # === Bước 1: Tiền xử lý
 
         # Chuẩn hóa văn bản
-        normalized_text = normalize_text(text)
+        standardized_text = standardize_text(text)
 
         # Sửa những từ không dấu, viết tắt, từ lóng
-        corrected_text = correct_slang_words(normalized_text)
+        corrected_text = correct_slang_words(standardized_text)
 
         # Tách từ
         tokenized_text = tokenize_text(corrected_text)
@@ -156,7 +156,10 @@ with col_1:
                 st.rerun()
         
         with pagination_col3:
-            st.write(f"{current_page}/{total_pages}")
+            st.markdown(
+                f"<div style='text-align:center; font-weight:600'>{current_page}/{total_pages}</div>",
+                unsafe_allow_html=True,
+            )
         
         with pagination_col4:
             if st.button("Tiếp theo ▶", disabled=not st.session_state.pagination_has_more, use_container_width=True):
@@ -168,7 +171,7 @@ with col_2:
             reset_pagination()
             result, display_result, error = full_pipeline(user_input, global_pipeline)
 
-            if result is not None and display_result is not None:
+            if result and display_result:
                 # Hiển thị kết quả
                 show_sentiment_result(result['sentiment'], display_result['sentiment_score'])
 

@@ -1,9 +1,9 @@
 from underthesea import word_tokenize
 from constant import CORRECTION_DICT
 
-def normalize_text(text: str) -> str:
-    normalized_text = text.strip().lower()
-    return normalized_text
+def standardize_text(text: str) -> str:
+    standardized_text = text.strip().lower()
+    return standardized_text
 
 def correct_slang_words(text: str) -> str:
     words = text.split()
