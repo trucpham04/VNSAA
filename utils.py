@@ -10,10 +10,10 @@ def show_sentiment_result(label: str, score: float):
         case "NEUTRAL":
             return st.warning(f"Trung tính - {score}%", icon="😐")
 
-def show_pipeline_steps(text, corrected_text, tokenized_text, sentiment, result):
+def show_pipeline_steps(original_text, corrected_text, tokenized_text, sentiment, result):
     with st.expander("Xem chi tiết luồng xử lý", expanded=True):
         st.markdown("##### 1. Câu ban đầu")
-        st.code(text)
+        st.code(original_text)
 
         st.markdown("##### 2. Tiền xử lý")
         col1, col2 = st.columns(2)
@@ -21,11 +21,11 @@ def show_pipeline_steps(text, corrected_text, tokenized_text, sentiment, result)
             st.markdown("###### Chuẩn hóa")
             st.code(corrected_text)
         with col2:
-            st.markdown("###### Phân đoạn từ")
+            st.markdown("###### Tách từ")
             st.code(tokenized_text)
 
         st.markdown("##### 3. Phân loại cảm xúc")
-        st.code(sentiment['label'])
+        st.code(sentiment)
         
         st.markdown("##### 4. Hợp nhất kết quả")
         st.json(result)

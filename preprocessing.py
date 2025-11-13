@@ -12,7 +12,7 @@ def correct_slang_words(text: str) -> str:
     return corrected_text
 
 def tokenize_text(text: str) -> str:
-    # Phân đoạn từ sử dụng underthesea
+    # Tách từ sử dụng underthesea
     tokenized_list = word_tokenize(text)
 
     # Thay khoảng trắng trong token bằng dấu gạch dưới

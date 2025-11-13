@@ -10,13 +10,13 @@ def full_pipeline(text: str, sentiment_pipeline):
     try:
         # === Bước 1: Tiền xử lý
 
-        # Chuẩn hóa câu
-        normalized_sentence = normalize_text(text)
+        # Chuẩn hóa văn bản
+        normalized_text = normalize_text(text)
 
         # Sửa những từ không dấu, viết tắt, từ lóng
-        corrected_text = correct_slang_words(normalized_sentence)
+        corrected_text = correct_slang_words(normalized_text)
 
-        # Phân đoạn từ
+        # Tách từ
         tokenized_text = tokenize_text(corrected_text)
 
         # === Bước 2: Phân loại cảm xúc
@@ -29,19 +29,23 @@ def full_pipeline(text: str, sentiment_pipeline):
         }
 
         # Kiểm tra hợp lệ
-        if len(result["text"]) < 5:
-            return None, "Câu không hợp lệ, vui lòng thử lại"
+        if len(result["text"]) < 5 or len(result["text"]) > 50:
+            return None, None, "Độ dài câu không hợp lệ, vui lòng thử lại (5-50 ký tự)"
 
         # Lưu kết quả vào database
         save_to_sqlite(result)
-        
-        # Hiển thị kết quả
-        show_sentiment_result(result['sentiment'], sentiment['score'])
 
-        # Hiển thị chi tiết các bước trong pipeline
-        show_pipeline_steps(text, corrected_text, tokenized_text, sentiment, result)
-        
-        return result, None
+        # Thông tin hiển thị
+        display_result = {
+            "original_text": text,
+            "corrected_text": corrected_text,
+            "tokenized_text": tokenized_text,
+            "sentiment_label": sentiment['label'],
+            "sentiment_score": round(sentiment['score'] * 100, 2),
+        }
+               
+        # Trả về kết quả
+        return result, display_result, None
 
     except Exception as e:
         return None, f"Pipeline error: {e}. Please try again."
@@ -54,7 +58,6 @@ st.set_page_config(page_title="Vietnamese Sentiment Assistant", layout="wide")
 
 st.markdown("# Nhận diện cảm xúc tiếng Việt")
 
-# Initialize pagination state
 if 'pagination_last_id' not in st.session_state:
     st.session_state.pagination_last_id = None
 if 'pagination_history' not in st.session_state:
@@ -90,7 +93,6 @@ with col_1:
     def confirm_delete_all():
         if st.button("Xác nhận"):
             delete_all_records()
-            # Reset pagination state
             reset_pagination()
             st.rerun()
 
@@ -102,10 +104,8 @@ with col_1:
         if st.button("Làm mới", icon="🔄", width="stretch", on_click=reset_pagination):
             pass
 
-    # Load data with pagination
     df_history = load_data_from_sqlite(last_id=st.session_state.pagination_last_id)
     
-    # Check if there are more records and calculate current last_id
     current_last_id = None
     if not df_history.empty:
         current_last_id = int(df_history.iloc[-1]['id'])
@@ -114,21 +114,15 @@ with col_1:
         st.session_state.pagination_has_more = False
 
     def go_to_next_page():
-        """Navigate to next page"""
         if current_last_id is not None:
-            # Save current last_id to history for "Previous" button
             if st.session_state.pagination_last_id is not None:
                 st.session_state.pagination_history.append(st.session_state.pagination_last_id)
-            # Update to new last_id
             st.session_state.pagination_last_id = current_last_id
 
     def go_to_previous_page():
-        """Navigate to previous page"""
         if st.session_state.pagination_history:
-            # Pop the last last_id from history
             st.session_state.pagination_last_id = st.session_state.pagination_history.pop()
         else:
-            # Go back to first page
             st.session_state.pagination_last_id = None
        
     if df_history.empty:
@@ -147,10 +141,8 @@ with col_1:
                         "timestamp": st.column_config.TextColumn("Thời gian", width=100),
                     })
         
-        # Pagination controls
         pagination_col1, pagination_col2, pagination_col3, pagination_col4, pagination_col5 = st.columns([2, 1, 0.5, 1, 2 ])
         
-        # Calculate current page and total pages
         is_first_page = st.session_state.pagination_last_id is None
         if is_first_page:
             current_page = 1
@@ -159,27 +151,30 @@ with col_1:
         total_pages = get_total_pages()
         
         with pagination_col2:
-            # Previous button - show if not on first page
             if st.button("◀ Trước", disabled=is_first_page, use_container_width=True):
                 go_to_previous_page()
                 st.rerun()
         
         with pagination_col3:
-            # Show current page / total pages in the middle
             st.write(f"{current_page}/{total_pages}")
         
         with pagination_col4:
-            # Next button - show if there are more records
             if st.button("Tiếp theo ▶", disabled=not st.session_state.pagination_has_more, use_container_width=True):
                 go_to_next_page()
                 st.rerun()
 
 with col_2:
     if analyze_button:
-            # Reset pagination to show latest result after new analysis
             reset_pagination()
-            result, error = full_pipeline(user_input, global_pipeline)
-                        
+            result, display_result, error = full_pipeline(user_input, global_pipeline)
+
+            if result is not None and display_result is not None:
+                # Hiển thị kết quả
+                show_sentiment_result(result['sentiment'], display_result['sentiment_score'])
+
+                # Hiển thị chi tiết các bước trong pipeline
+                show_pipeline_steps(display_result['original_text'], display_result['corrected_text'], display_result['tokenized_text'], display_result['sentiment_label'], result)
+
             if error:
                 st.error(f"Lỗi: {error}")
     else:

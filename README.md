@@ -17,7 +17,7 @@
 
 Ứng dụng này cung cấp một pipeline hoàn chỉnh để phân tích cảm xúc văn bản tiếng Việt, bao gồm:
 
-- **Tiền xử lý văn bản**: Chuẩn hóa, sửa lỗi chính tả, từ lóng, và phân đoạn từ
+- **Tiền xử lý văn bản**: Chuẩn hóa, sửa lỗi chính tả, từ lóng, và tách từ
 - **Phân loại cảm xúc**: Sử dụng mô hình PhoBERT được fine-tuned cho tiếng Việt
 - **Lưu trữ lịch sử**: SQLite database với phân trang cursor-based tối ưu
 - **Giao diện web**: Streamlit với UI thân thiện và trực quan
@@ -83,7 +83,7 @@ Pipeline xử lý văn bản gồm các bước sau:
   - Từ không dấu: "toi" → "tôi", "ban" → "bạn"
   - Từ lóng: "mik" → "mình", "iu" → "yêu"
 
-#### Bước 1.3: Phân đoạn từ (`tokenize_text`)
+#### Bước 1.3: Tách từ (`tokenize_text`)
 
 - Sử dụng thư viện `underthesea` để tokenize văn bản tiếng Việt
 - Thay thế khoảng trắng trong token bằng dấu gạch dưới để phù hợp với format của mô hình
