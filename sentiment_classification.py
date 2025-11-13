@@ -21,6 +21,9 @@ def classify_sentiment(text: str, sentiment_pipeline):
                 return "NEGATIVE"
             case "NEU":
                 return "NEUTRAL"
+    
+    # Định dạng lại xác suất
+    sentiment['score'] = round(sentiment['score'] * 100, 2)
 
     sentiment['label'] = get_sentiment_label(sentiment['label'])
 

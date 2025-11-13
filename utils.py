@@ -1,14 +1,14 @@
 import streamlit as st
 
-def show_sentiment_result(label: str):
+def show_sentiment_result(label: str, score: float):
     st.markdown("### Kết quả phân tích")
     match label:
         case "POSITIVE":
-            return st.success(f"😊 Tích cực")
+            return st.success(f"Tích cực - {score}%", icon="😊")
         case "NEGATIVE":
-            return st.error(f"😠 Tiêu cực")
+            return st.error(f"Tiêu cực - {score}%", icon="😠")
         case "NEUTRAL":
-            return st.warning(f"😐 Trung tính")
+            return st.warning(f"Trung tính - {score}%", icon="😐")
 
 def show_pipeline_steps(text, corrected_text, tokenized_text, sentiment, result):
     with st.expander("Xem chi tiết luồng xử lý", expanded=True):

@@ -36,7 +36,7 @@ def full_pipeline(text: str, sentiment_pipeline):
         save_to_sqlite(result)
         
         # Hiển thị kết quả
-        show_sentiment_result(result['sentiment'])
+        show_sentiment_result(result['sentiment'], sentiment['score'])
 
         # Hiển thị chi tiết các bước trong pipeline
         show_pipeline_steps(text, corrected_text, tokenized_text, sentiment, result)

@@ -3,6 +3,7 @@ DB_NAME = "sentiment_data.db"
 MAX_SENTENCE_LENGTH = 50
 
 CORRECTION_DICT = {
+    "buon": "buồn",
     "chan": "chán",
     "the": "thế",
     "nhi": "nhỉ",
