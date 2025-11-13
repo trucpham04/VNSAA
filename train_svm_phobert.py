@@ -11,6 +11,48 @@ import joblib
 
 from preprocessing import correct_slang_words, standardize_text, tokenize_text
 
+# =========================== Main Training Script ===========================
+def main():
+    start_time = time.time()
+
+    print("> Loading dataset...")
+    # 1. Load dataset CSV (cột: text, label 0/1/2)
+    df = pd.read_csv("data_sentiment_vn.csv")  # label: 0=negative,1=neutral,2=positive
+    df['text'] = df['text'].apply(lambda x: tokenize_text(correct_slang_words(standardize_text(x))))
+    texts = df['text'].tolist()
+    labels = df['label'].tolist()
+    
+    # 2. Load PhoBERT
+    print("> Loading PhoBERT model...")
+    model, tokenizer = load_phobert_model()
+    
+    # 3. Extract features
+    print("> Extracting features from PhoBERT embeddings...")
+    features = extract_features(model, tokenizer, texts, max_len=150, batch_size=32, device='cpu')
+    
+    # 4. Train/Test split
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
+    
+    # 5. Train SVM
+    print("> Training SVM classifier...")
+    clf = SVC(kernel='linear', probability=True, gamma=0.125)
+    clf.fit(X_train, y_train)
+    
+    # 6. Evaluate
+    y_pred = clf.predict(X_test)
+    print("> Accuracy:", accuracy_score(y_test, y_pred))
+    print(classification_report(y_test, y_pred))
+    
+    # 7. Save classifier
+    joblib.dump(clf, "svm_phobert_sentiment.pkl")
+    print("> Saved classifier to svm_phobert_sentiment.pkl")
+
+    end_time = time.time()
+    print(f"> Training SVM completed in {end_time - start_time:.2f} seconds.")
+
+if __name__ == "__main__":
+    main()
+
 # =========================== Dataset ===========================
 class SentimentDataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_len=100):
@@ -63,44 +105,3 @@ def extract_features(model, tokenizer, texts, max_len=100, batch_size=16, device
     features = np.vstack(features)
     return features
 
-# =========================== Main Training Script ===========================
-def main():
-    start_time = time.time()
-
-    print("> Loading dataset...")
-    # 1. Load dataset CSV (cột: text, label 0/1/2)
-    df = pd.read_csv("data_sentiment_vn.csv")  # label: 0=negative,1=neutral,2=positive
-    df['text'] = df['text'].apply(lambda x: tokenize_text(correct_slang_words(standardize_text(x))))
-    texts = df['text'].tolist()
-    labels = df['label'].tolist()
-    
-    # 2. Load PhoBERT
-    print("> Loading PhoBERT model...")
-    model, tokenizer = load_phobert_model()
-    
-    # 3. Extract features
-    print("> Extracting features from PhoBERT embeddings...")
-    features = extract_features(model, tokenizer, texts, max_len=150, batch_size=32, device='cpu')
-    
-    # 4. Train/Test split
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
-    
-    # 5. Train SVM
-    print("> Training SVM classifier...")
-    clf = SVC(kernel='linear', probability=True, gamma=0.125)
-    clf.fit(X_train, y_train)
-    
-    # 6. Evaluate
-    y_pred = clf.predict(X_test)
-    print("> Accuracy:", accuracy_score(y_test, y_pred))
-    print(classification_report(y_test, y_pred))
-    
-    # 7. Save classifier
-    joblib.dump(clf, "svm_phobert_sentiment.pkl")
-    print("> Saved classifier to svm_phobert_sentiment.pkl")
-
-    end_time = time.time()
-    print(f"> Training SVM completed in {end_time - start_time:.2f} seconds.")
-
-if __name__ == "__main__":
-    main()

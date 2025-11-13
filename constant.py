@@ -41,4 +41,8 @@ CORRECTION_DICT = {
     "e": "em",
     "a": "anh",
     "c": "chị",
+    "hqua": "hôm qua",
+    "di": "đi",
+    "mò": "mà",
+    "rùi": "rồi"
 }
