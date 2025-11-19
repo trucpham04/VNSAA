@@ -44,5 +44,9 @@ CORRECTION_DICT = {
     "hqua": "hôm qua",
     "di": "đi",
     "mò": "mà",
-    "rùi": "rồi"
+    "rùi": "rồi",
+    "jz": "gì vậy",
+    "m": "mày",
+    "t": "tôi",
+    "qtqd": "quá trời quá đất"
 }

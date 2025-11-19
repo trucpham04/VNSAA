@@ -1,127 +1,93 @@
 # Vietnamese Sentiment Analysis Application
 
-Ứng dụng phân tích cảm xúc tiếng Việt sử dụng mô hình PhoBERT và giao diện web Streamlit. Ứng dụng hỗ trợ phân tích cảm xúc (tích cực, tiêu cực, trung tính) từ văn bản tiếng Việt với khả năng lưu trữ lịch sử và phân trang hiệu quả.
+Ứng dụng Streamlit phân tích cảm xúc tiếng Việt dựa trên PhoBERT-base-v2 (Hugging Face) và bộ phân loại SVM huấn luyện riêng. Văn bản đầu vào được chuẩn hóa, sửa từ lóng, tokenize rồi suy luận cảm xúc (NEGATIVE/NEUTRAL/POSITIVE), kết quả được lưu vào SQLite.
 
 ## Mục lục
 
-- [Tổng quan](#tổng-quan)
-- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-- [Mô hình sử dụng](#mô-hình-sử-dụng)
-- [Pipeline xử lý](#pipeline-xử-lý)
-- [Tính năng](#tính-năng)
-- [Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt)
-- [Cấu trúc Database](#cấu-trúc-database)
-- [Ghi chú](#ghi-chú)
+- [Vietnamese Sentiment Analysis Application](#vietnamese-sentiment-analysis-application)
+  - [Mục lục](#mục-lục)
+  - [Tổng quan](#tổng-quan)
+  - [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+  - [Mô hình sử dụng](#mô-hình-sử-dụng)
+    - [PhoBERT + SVM](#phobert--svm)
+  - [Pipeline xử lý](#pipeline-xử-lý)
+    - [1. Tiền xử lý](#1-tiền-xử-lý)
+    - [2. Phân loại](#2-phân-loại)
+    - [3. Lưu trữ \& UI](#3-lưu-trữ--ui)
+  - [Tính năng](#tính-năng)
+  - [Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt)
+    - [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
+    - [Các bước thực hiện](#các-bước-thực-hiện)
+      - [Bước 1: Clone Github Repo](#bước-1-clone-github-repo)
+      - [Bước 2: Môi trường ảo](#bước-2-môi-trường-ảo)
+      - [Bước 3: Cài đặt](#bước-3-cài-đặt)
+      - [Bước 4: Chạy](#bước-4-chạy)
+    - [Bước 5: Sử dụng](#bước-5-sử-dụng)
+  - [Cấu trúc Database](#cấu-trúc-database)
+  - [Dependencies chính](#dependencies-chính)
+  - [Huấn luyện Classifier](#huấn-luyện-classifier)
+  - [Ghi chú](#ghi-chú)
 
 ## Tổng quan
 
-Ứng dụng này cung cấp một pipeline hoàn chỉnh để phân tích cảm xúc văn bản tiếng Việt, bao gồm:
+Ứng dụng cung cấp pipeline hoàn chỉnh cho văn bản tiếng Việt:
 
-- **Tiền xử lý văn bản**: Chuẩn hóa, sửa lỗi chính tả, từ lóng, và tách từ
-- **Phân loại cảm xúc**: Sử dụng mô hình PhoBERT được fine-tuned cho tiếng Việt
-- **Lưu trữ lịch sử**: SQLite database với phân trang cursor-based tối ưu
-- **Giao diện web**: Streamlit với UI thân thiện và trực quan
+- Chuẩn hóa, sửa viết tắt/từ lóng và tokenize bằng `underthesea`
+- Sinh embedding PhoBERT-base-v2, phân loại bằng SVM đã huấn luyện
+- Lưu lịch sử phân tích vào SQLite
 
 ## Cấu trúc thư mục
 
+```text
+VNSAA/
+├── app.py                      # UI Streamlit + điều phối pipeline, phân trang lịch sử
+├── preprocessing.py            # standardize → slang correction → tokenize
+├── model_loading.py            # tải PhoBERT-base-v2 + tokenizer + SVM pickle
+├── sentiment_classification.py # tạo embedding CLS, dự đoán label + score
+├── database.py                 # SQLite CRUD, cursor pagination, đếm trang
+├── utils.py                    # UI helper hiển thị kết quả & pipeline
+├── constant.py                 # DB_NAME, giới hạn độ dài, từ điển sửa từ lóng
+├── requirements.txt            # danh sách package
+├── sentiment_data.db           # database tạo tự động khi chạy app
+├── train_svm_phobert.py        # training SVM classifier
+├── data_sentiment_vn.csv       # dataset để training SVM classifier
+└── svm_phobert_sentiment.pkl   # classifier đã huấn luyện
 ```
-seminar/
-├── app.py                      # File chính chứa UI Streamlit và logic điều phối
-├── model_loading.py            # Module tải và cache mô hình sentiment analysis
-├── preprocessing.py            # Module tiền xử lý văn bản (chuẩn hóa, sửa lỗi, tokenize)
-├── sentiment_classification.py # Module phân loại cảm xúc sử dụng mô hình
-├── database.py                 # Module quản lý database SQLite và phân trang
-├── utils.py                    # Module chứa các hàm tiện ích hiển thị
-├── constant.py                 # File chứa các hằng số và từ điển sửa lỗi
-├── requirements.txt            # Danh sách các package Python cần thiết
-├── sentiment_data.db           # Database SQLite lưu trữ lịch sử phân tích
-└── README.md                   # File tài liệu này
-```
-
-### Mô tả các file chính
-
-- **app.py**: File entry point của ứng dụng, chứa giao diện Streamlit, quản lý state, và điều phối các module khác
-- **model_loading.py**: Tải mô hình `wonrax/phobert-base-vietnamese-sentiment` từ Hugging Face và cache để tối ưu hiệu suất
-- **preprocessing.py**: Xử lý văn bản đầu vào với 3 bước: normalize, correct slang, và tokenize
-- **sentiment_classification.py**: Sử dụng pipeline từ transformers để phân loại cảm xúc và xử lý kết quả
-- **database.py**: Quản lý SQLite database với các hàm CRUD và phân trang cursor-based
-- **utils.py**: Các hàm helper để hiển thị kết quả và chi tiết pipeline
-- **constant.py**: Chứa tên database, từ điển sửa lỗi từ lóng, và các hằng số khác
 
 ## Mô hình sử dụng
 
-### PhoBERT Base Vietnamese Sentiment
+### PhoBERT + SVM
 
-Ứng dụng sử dụng mô hình **PhoBERT** được fine-tuned cho phân tích cảm xúc tiếng Việt:
-
-- **Model**: `wonrax/phobert-base-vietnamese-sentiment`
-- **Nguồn**: Hugging Face Model Hub
-- **Kiến trúc**: PhoBERT (Vietnamese BERT) - một biến thể của BERT được pre-train trên corpus tiếng Việt lớn
-- **Task**: Sentiment Analysis (3 lớp: POSITIVE, NEGATIVE, NEUTRAL)
-
-### Đặc điểm mô hình
-
-- **Input**: Văn bản tiếng Việt đã được tokenize
-- **Output**: Nhãn cảm xúc (POSITIVE/NEGATIVE/NEUTRAL) kèm confidence score
-- **Xử lý đặc biệt**: Nếu confidence score < 0.5, mô hình sẽ trả về NEUTRAL để tránh dự đoán không chắc chắn
+- **Backbone**: `vinai/phobert-base-v2` (AutoModel + AutoTokenizer, chạy CPU)
+- **Classifier**: SVM tuyến tính (`svm_phobert_sentiment.pkl`) huấn luyện trên embedding CLS
+- **Nhãn**: NEGATIVE / NEUTRAL / POSITIVE, tự động chuyển về NEUTRAL nếu score < 0.5
 
 ## Pipeline xử lý
 
-Pipeline xử lý văn bản gồm các bước sau:
+### 1. Tiền xử lý
 
-### 1. Tiền xử lý (Preprocessing)
+- `standardize_text`: strip + lowercase
+- `correct_slang_words`: thay thế bằng `CORRECTION_DICT`
+- `tokenize_text`: `underthesea.word_tokenize`, thay khoảng trắng bằng `_`
 
-#### Bước 1.1: Chuẩn hóa văn bản (`normalize_text`)
+### 2. Phân loại
 
-- Loại bỏ khoảng trắng thừa ở đầu và cuối
-- Chuyển toàn bộ văn bản sang chữ thường
+- Dataset suy luận 1 mẫu → DataLoader batch 1
+- PhoBERT tạo embedding CLS → numpy
+- SVM dự đoán xác suất, ép `NEUTRAL` nếu score < 0.5
 
-#### Bước 1.2: Sửa từ lóng và viết tắt (`correct_slang_words`)
+### 3. Lưu trữ & UI
 
-- Sử dụng từ điển `CORRECTION_DICT` trong `constant.py` để thay thế:
-  - Từ viết tắt: "dk" → "được", "k" → "không", "vs" → "với"
-  - Từ không dấu: "toi" → "tôi", "ban" → "bạn"
-  - Từ lóng: "mik" → "mình", "iu" → "yêu"
-
-#### Bước 1.3: Tách từ (`tokenize_text`)
-
-- Sử dụng thư viện `underthesea` để tokenize văn bản tiếng Việt
-- Thay thế khoảng trắng trong token bằng dấu gạch dưới để phù hợp với format của mô hình
-
-### 2. Phân loại cảm xúc (Sentiment Classification)
-
-#### Bước 2.1: Dự đoán (`classify_sentiment`)
-
-- Đưa văn bản đã tokenize vào pipeline sentiment analysis
-- Lấy nhãn có confidence score cao nhất
-
-#### Bước 2.2: Xử lý kết quả
-
-- Nếu confidence score < 0.5: gán nhãn NEUTRAL
-- Chuyển đổi nhãn từ dạng viết tắt (POS/NEG/NEU) sang dạng đầy đủ (POSITIVE/NEGATIVE/NEUTRAL)
-
-### 3. Lưu trữ và hiển thị
-
-- Lưu kết quả vào SQLite database
-- Hiển thị kết quả với icon và màu sắc
-- Hiển thị chi tiết các bước xử lý
+- Ghi bản ghi đã tokenize + nhãn vào SQLite
+- Lược sử hiển thị dạng bảng có phân trang
+- Cột phải hiển thị icon cảm xúc + chi tiết pipeline
 
 ## Tính năng
 
-### Phân tích cảm xúc
-
-- Nhập văn bản tiếng Việt (5-50 ký tự)
-- Phân tích tự động với pipeline hoàn chỉnh
-- Hiển thị kết quả trực quan với icon và màu sắc
-
-### Lịch sử phân tích
-
-- Lưu trữ tất cả các kết quả phân tích vào database
-- Hiển thị lịch sử với pagination cursor-based tối ưu
-- Hỗ trợ phân trang khi có hơn 50 bản ghi
-- Hiển thị số trang hiện tại / tổng số trang
-- Nút "Làm mới" để reset về trang đầu
-- Nút "Xóa tất cả" để xóa toàn bộ lịch sử
+- Nhập nhanh văn bản (5–50 ký tự), pipeline chạy đầy đủ, kết quả hiển thị tức thì
+- Phần lịch sử cho phép làm mới, phân trang trước/sau, xem tổng số trang
+- Có dialog xác nhận trước khi xóa toàn bộ lịch sử trong DB
+- Thông báo lỗi thân thiện khi pipeline hoặc DB gặp sự cố
 
 ## Hướng dẫn cài đặt
 
@@ -130,82 +96,80 @@ Pipeline xử lý văn bản gồm các bước sau:
 - Python 3.8 trở lên
 - Kết nối internet (để tải mô hình từ Hugging Face lần đầu)
 
-### Bước 1: Clone repository
+### Các bước thực hiện
+
+#### Bước 1: Clone Github Repo
 
 ```bash
 git clone https://github.com/trucpham04/VNSAA.git
 cd VNSAA
 ```
 
-### Bước 2: Tạo môi trường ảo (khuyến nghị)
+#### Bước 2: Môi trường ảo
 
 ```bash
-# Sử dụng venv
 python -m venv .venv
-
-# Kích hoạt môi trường ảo
-# Trên Windows:
-.venv\Scripts\activate
-# Trên Linux/Mac:
+# Linux & MacOS
 source .venv/bin/activate
+# Windows
+.venv\Scripts\activate
 ```
 
-### Bước 3: Cài đặt dependencies
+#### Bước 3: Cài đặt
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Lưu ý**: Quá trình cài đặt có thể mất vài phút do cần tải các package lớn như:
+> Torch + transformers + underthesea khá lớn, cần kết nối mạng ổn định.
 
-- `torch` (PyTorch)
-- `transformers` (Hugging Face Transformers)
-- `underthesea` (Vietnamese NLP library)
-
-### Bước 4: Chạy ứng dụng
+#### Bước 4: Chạy
 
 ```bash
 streamlit run app.py
 ```
 
-Ứng dụng sẽ tự động:
+> App tự tạo database (nếu chưa có), tải PhoBERT lần đầu rồi mở `http://localhost:8501`.
 
-- Tạo database SQLite nếu chưa có
-- Tải mô hình từ Hugging Face (lần đầu chạy sẽ mất thời gian)
-- Mở trình duyệt tại `http://localhost:8501`
+### Bước 5: Sử dụng
 
-### Bước 5: Sử dụng ứng dụng
-
-1. Nhập văn bản tiếng Việt vào ô nhập liệu (5-50 ký tự)
-2. Nhấn nút "Phân tích"
-3. Xem kết quả ở cột bên phải
-4. Xem lịch sử phân tích ở cột bên trái
+Nhập câu 5–50 ký tự → bấm “Phân tích” → xem kết qủa phân tích kèm quá trình chi tiết.
 
 ## Cấu trúc Database
 
-### Bảng `sentiments`
-
-Lưu trữ tất cả các kết quả phân tích cảm xúc:
-
-| Cột         | Kiểu dữ liệu                       | Mô tả                                    |
-| ----------- | ---------------------------------- | ---------------------------------------- |
-| `id`        | INTEGER PRIMARY KEY AUTOINCREMENT  | ID tự động tăng                          |
-| `text`      | TEXT NOT NULL                      | Văn bản đã được tokenize                 |
-| `sentiment` | TEXT NOT NULL                      | Nhãn cảm xúc (POSITIVE/NEGATIVE/NEUTRAL) |
-| `timestamp` | DATETIME DEFAULT CURRENT_TIMESTAMP | Thời gian phân tích                      |
+- **Bảng**: `sentiments`
+- `id` INTEGER, PRIMARY KEY, AUTOINCREMENT
+- `text` TEXT, NOT NULL (chuỗi đã tokenize)
+- `sentiment` TEXT, NOT NULL (NEGATIVE/NEUTRAL/POSITIVE)
+- `timestamp` DATETIME, DEFAULT CURRENT_TIMESTAMP
 
 ## Dependencies chính
 
-- **streamlit**: Framework web UI
-- **transformers**: Thư viện Hugging Face để sử dụng mô hình
-- **torch**: PyTorch cho deep learning
-- **underthesea**: Thư viện NLP tiếng Việt (tokenization)
-- **pandas**: Xử lý dữ liệu và DataFrame
-- **sqlite3**: Database SQLite (built-in Python)
+- `streamlit`: UI, cache model, quản lý state phân trang
+- `transformers` + `torch`: tải PhoBERT và chạy embedding
+- `underthesea`: word_tokenize tiếng Việt
+- `scikit-learn` + `joblib`: huấn luyện & load SVM
+- `pandas` + `sqlite3`: thao tác dữ liệu và DB nhẹ
+
+## Huấn luyện Classifier
+
+- **Dataset**:
+  - `data_sentiment_vn.csv` (cột `text`, `label` với giá trị 0/1/2). Văn bản được chuẩn hóa, sửa từ lóng và tokenize giống pipeline suy luận.
+  - Tập dữ liệu gồm 150 các câu thường dùng trong đời sống hằng ngày.
+- **Feature extractor**: PhoBERT-base-v2 sinh embedding CLS (max_len 150, batch 32, CPU), lưu thành ma trận numpy.
+- **Training**: Chia tập 80/20 (stratify), huấn luyện `SVC(kernel='linear', probability=True, gamma=0.125)`, in accuracy + classification report.
+- **Xuất model**: Sau khi train, classifier được lưu tại `svm_phobert_sentiment.pkl` (joblib). Đảm bảo file này nằm ở thư mục gốc để `model_loading.py` sử dụng.
+- **Chạy lại training**
+
+```bash
+python train_svm_phobert.py
+```
+
+> Lần chạy đầu sẽ tải PhoBERT và có thể tốn vài phút tùy kích thước dataset.
 
 ## Ghi chú
 
-- Lần đầu chạy ứng dụng, mô hình sẽ được tải từ Hugging Face và cache lại, có thể mất vài phút
-- Database được tạo tự động khi chạy ứng dụng lần đầu
-- Mô hình được cache trong session để tối ưu hiệu suất
-- Ứng dụng hỗ trợ xử lý từ lóng và viết tắt phổ biến trong tiếng Việt
+- Lần chạy đầu cần thời gian tải PhoBERT + dependencies; các lần sau dùng cache.
+- DB SQLite và file `svm_phobert_sentiment.pkl` được đọc/ghi tại thư mục gốc dự án.
+- Giữ số ký tự đầu vào trong khoảng 5–50 để tránh lỗi kiểm tra độ dài.
+- Sẵn sàng mở rộng: chỉ cần cập nhật SVM pickle mới và/hoặc từ điển sửa từ lóng.

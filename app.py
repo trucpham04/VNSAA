@@ -5,6 +5,9 @@ from preprocessing import correct_slang_words, standardize_text, tokenize_text
 from sentiment_classification import classify_sentiment
 from utils import show_pipeline_steps, show_sentiment_result
 
+initialize_database()
+sentiment_pipeline = load_model_pipeline()
+
 # =========================== Full Pipeline ===========================
 def full_pipeline(text: str, sentiment_pipeline):
     try:
@@ -51,9 +54,6 @@ def full_pipeline(text: str, sentiment_pipeline):
         return None, f"Pipeline error: {e}. Please try again."
 
 # =========================== UI ===========================
-initialize_database()
-global_pipeline = load_model_pipeline()
-
 st.set_page_config(page_title="Vietnamese Sentiment Assistant", layout="wide")
 
 st.markdown("# Nhận diện cảm xúc tiếng Việt")
@@ -169,7 +169,7 @@ with col_1:
 with col_2:
     if analyze_button:
             reset_pagination()
-            result, display_result, error = full_pipeline(user_input, global_pipeline)
+            result, display_result, error = full_pipeline(user_input, sentiment_pipeline)
 
             if result and display_result:
                 # Hiển thị kết quả
