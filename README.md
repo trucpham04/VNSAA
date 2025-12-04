@@ -1,3 +1,5 @@
+![](https://github.com/trucpham04/VNSAA/blob/main/images/landing.png?raw=true)
+
 # Vietnamese Sentiment Analysis Application
 
 Ứng dụng Streamlit phân tích cảm xúc tiếng Việt dựa trên PhoBERT-base-v2 (Hugging Face) và bộ phân loại SVM huấn luyện riêng. Văn bản đầu vào được chuẩn hóa, sửa từ lóng, tokenize rồi suy luận cảm xúc (NEGATIVE/NEUTRAL/POSITIVE), kết quả được lưu vào SQLite.
