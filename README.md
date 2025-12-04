@@ -2,7 +2,7 @@
 
 # Vietnamese Sentiment Analysis Application
 
-Ứng dụng Streamlit phân tích cảm xúc tiếng Việt dựa trên PhoBERT-base-v2 (Hugging Face) và bộ phân loại SVM huấn luyện riêng. Văn bản đầu vào được chuẩn hóa, sửa từ lóng, tokenize rồi suy luận cảm xúc (NEGATIVE/NEUTRAL/POSITIVE), kết quả được lưu vào SQLite.
+Ứng dụng Streamlit phân tích cảm xúc tiếng Việt dựa trên PhoBERT-base-v2 (Hugging Face) và bộ phân loại SVM.
 
 ## Mục lục
 
@@ -86,7 +86,7 @@ VNSAA/
 
 ## Tính năng
 
-- Nhập nhanh văn bản (5–50 ký tự), pipeline chạy đầy đủ, kết quả hiển thị tức thì
+- Nhập nhanh văn bản (1–50 ký tự), pipeline chạy đầy đủ, kết quả hiển thị tức thì
 - Phần lịch sử cho phép làm mới, phân trang trước/sau, xem tổng số trang
 - Có dialog xác nhận trước khi xóa toàn bộ lịch sử trong DB
 - Thông báo lỗi thân thiện khi pipeline hoặc DB gặp sự cố
@@ -135,7 +135,7 @@ streamlit run app.py
 
 ### Bước 5: Sử dụng
 
-Nhập câu 5–50 ký tự → bấm “Phân tích” → xem kết qủa phân tích kèm quá trình chi tiết.
+Nhập câu 1–50 ký tự → bấm “Phân tích” → xem kết qủa phân tích kèm quá trình chi tiết.
 
 ## Cấu trúc Database
 
@@ -173,5 +173,4 @@ python train_svm_phobert.py
 
 - Lần chạy đầu cần thời gian tải PhoBERT + dependencies; các lần sau dùng cache.
 - DB SQLite và file `svm_phobert_sentiment.pkl` được đọc/ghi tại thư mục gốc dự án.
-- Giữ số ký tự đầu vào trong khoảng 5–50 để tránh lỗi kiểm tra độ dài.
 - Sẵn sàng mở rộng: chỉ cần cập nhật SVM pickle mới và/hoặc từ điển sửa từ lóng.
